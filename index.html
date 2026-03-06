@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Min FIRE Kalkylator</title>
+    <title>💰 Min FIRE Kalkylator</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -68,17 +73,45 @@
         h3 { color: #2c3e50; margin-bottom: 10px; text-align: center; font-size: 1.1em; }
         .legend-info { text-align: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 10px; }
         
+        /* Design för exportknapparna */
+        .export-section {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px dashed #ccc;
+            flex-wrap: wrap; /* Gör att knapparna hamnar under varandra på små skärmar */
+        }
+        .btn {
+            background-color: #34495e;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn:hover { background-color: #2c3e50; }
+        .btn-excel { background-color: #27ae60; }
+        .btn-excel:hover { background-color: #219a52; }
+        .btn-pdf { background-color: #e74c3c; }
+        .btn-pdf:hover { background-color: #c0392b; }
+
         @media (max-width: 600px) {
             .input-grid { grid-template-columns: 1fr; }
             .container { padding: 15px; }
             .chart-wrapper { height: 250px; }
+            .btn { width: 100%; } /* Bredare knappar på mobilen */
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🔥 Min FIRE Kalkylator 🔥</h1>
+<div class="container" id="app-container">
+    <h1>🔥💰 Min FIRE Kalkylator 💰🔥</h1>
 
     <h2>Grunduppgifter</h2>
     <div class="input-grid">
@@ -156,9 +189,16 @@
     </div>
 </div>
 
+<div class="export-section">
+    <button class="btn" onclick="exportToImage()">🖼️ Spara som Bild</button>
+    <button class="btn btn-pdf" onclick="exportToPDF()">📄 Spara som PDF</button>
+    <button class="btn btn-excel" onclick="exportToExcel()">📊 Exportera till Excel</button>
+</div>
+
 <script>
     let capitalChartInstance = null;
     let withdrawalChartInstance = null;
+    let excelData = []; // Denna variabel sparar all data i bakgrunden för Excel-exporten
 
     function formatYAxis(value) {
         if (value >= 1000000) {
@@ -194,11 +234,14 @@
 
         let currentCapital = initialCapital;
         
-        // Arrayer för graferna
         let capitalHistory = [initialCapital];
-        let taxHistory = [firstYearIskTax]; // Ny array för skattelinjen
+        let taxHistory = [firstYearIskTax]; 
         let withdrawalHistory = [monthlySalary]; 
         let labels = ["År 0"];
+
+        // Återställ Excel-datan och sätt rubrikerna
+        excelData = [["År", "Sparkapital (kr)", "Månadsuttag (kr)", "Årlig ISK-skatt (kr)"]];
+        excelData.push([0, Math.round(initialCapital), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
 
         for (let i = 1; i <= years; i++) {
             let yearlyIskTax = currentCapital * iskRate;
@@ -215,13 +258,16 @@
             
             if (currentCapital < 0) {
                 currentCapital = 0;
-                yearlyIskTax = 0; // Om pengarna är slut betalar vi ingen skatt nästa år
+                yearlyIskTax = 0;
             }
 
             capitalHistory.push(currentCapital);
-            taxHistory.push(yearlyIskTax); // Spara årets skatt
+            taxHistory.push(yearlyIskTax); 
             withdrawalHistory.push(adjustedMonthlyWithdrawal); 
             labels.push("År " + i);
+
+            // Spara data till Excel-arrayen
+            excelData.push([i, Math.round(currentCapital), Math.round(adjustedMonthlyWithdrawal), Math.round(yearlyIskTax)]);
         }
 
         updateCapitalChart(labels, capitalHistory, taxHistory);
@@ -246,47 +292,37 @@
                         fill: true,
                         tension: 0.1,
                         pointRadius: 0,
-                        yAxisID: 'y' // Kopplad till vänster axel
+                        yAxisID: 'y'
                     },
                     {
                         label: 'Årlig ISK-skatt (Höger axel)',
                         data: taxData,
-                        borderColor: '#e74c3c', // Röd färg
+                        borderColor: '#e74c3c', 
                         backgroundColor: 'transparent',
                         borderWidth: 2,
-                        borderDash: [5, 5], // Gör linjen streckad
+                        borderDash: [5, 5], 
                         fill: false,
                         tension: 0.1,
                         pointRadius: 0,
-                        yAxisID: 'y1' // Kopplad till höger axel
+                        yAxisID: 'y1'
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false } // Dold, vi löste det med text ovanför istället för att spara plats
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        beginAtZero: true,
+                        type: 'linear', display: true, position: 'left', beginAtZero: true,
                         ticks: { callback: formatYAxis }
                     },
                     y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right', // Lägger skalan på höger sida
-                        beginAtZero: true,
-                        grid: { drawOnChartArea: false }, // Förhindrar att linjerna krockar med vänstra axelns rutnät
+                        type: 'linear', display: true, position: 'right', beginAtZero: true,
+                        grid: { drawOnChartArea: false },
                         ticks: { callback: formatYAxis }
                     },
-                    x: {
-                        ticks: { maxTicksLimit: 8 }
-                    }
+                    x: { ticks: { maxTicksLimit: 8 } }
                 }
             }
         });
@@ -301,33 +337,74 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Månadsuttag',
-                    data: data,
-                    borderColor: '#e67e22',
-                    backgroundColor: 'rgba(230, 126, 34, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.1,
-                    pointRadius: 0
+                    label: 'Månadsuttag', data: data,
+                    borderColor: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.2)',
+                    borderWidth: 2, fill: true, tension: 0.1, pointRadius: 0
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: formatYAxis }
-                    },
-                    x: {
-                        ticks: { maxTicksLimit: 8 }
-                    }
+                    y: { beginAtZero: true, ticks: { callback: formatYAxis } },
+                    x: { ticks: { maxTicksLimit: 8 } }
                 }
             }
         });
+    }
+
+    // --- EXPORT FUNKTIONER ---
+
+    // Exportera till Bild (PNG)
+    function exportToImage() {
+        const element = document.getElementById('app-container');
+        html2canvas(element).then(canvas => {
+            const link = document.createElement("a");
+            link.download = "Min_FIRE_Kalkylator.png";
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
+    }
+
+    // Exportera till PDF
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const element = document.getElementById('app-container');
+        
+        // Ta en bild av appen och stoppa in i PDF-dokumentet
+        html2canvas(element, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF('p', 'mm', 'a4'); // Stående A4
+            
+            // Anpassa bildens storlek så den passar på A4-papperet
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save("Min_FIRE_Kalkylator.pdf");
+        });
+    }
+
+    // Exportera till Excel (som en CSV-fil)
+    function exportToExcel() {
+        // \uFEFF hjälper Excel att förstå svenska tecken som Å, Ä, Ö (UTF-8)
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+        
+        // Loopa igenom datan och lägg till semikolon mellan kolumnerna
+        excelData.forEach(function(rowArray) {
+            let row = rowArray.join(";");
+            csvContent += row + "\r\n";
+        });
+
+        // Ladda ner filen
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Min_FIRE_Kalkyl.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     window.onload = calculateFIRE;
