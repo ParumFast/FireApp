@@ -54,10 +54,9 @@
             font-weight: bold;
         }
         
-        /* NYTT: En wrapper för graferna för att styra höjden */
         .chart-wrapper {
             position: relative;
-            height: 300px; /* Fast höjd så den inte krymper på mobilen */
+            height: 300px;
             width: 100%;
         }
         
@@ -67,12 +66,12 @@
             border-top: 1px solid #eee;
         }
         h3 { color: #2c3e50; margin-bottom: 10px; text-align: center; font-size: 1.1em; }
+        .legend-info { text-align: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 10px; }
         
-        /* Mobilanpassning */
         @media (max-width: 600px) {
             .input-grid { grid-template-columns: 1fr; }
             .container { padding: 15px; }
-            .chart-wrapper { height: 250px; } /* Något lägre på mobiler men behåller läsbarhet */
+            .chart-wrapper { height: 250px; }
         }
     </style>
 </head>
@@ -142,7 +141,8 @@
     </div>
 
     <div class="chart-container">
-        <h3>Kapitalets utveckling</h3>
+        <h3>Kapitalets utveckling & Årlig Skatt</h3>
+        <div class="legend-info">Vänster axel: Sparkapital (Grön) | Höger axel: Årlig ISK-skatt (Röd streckad)</div>
         <div class="chart-wrapper">
             <canvas id="capitalChart"></canvas>
         </div>
@@ -160,7 +160,6 @@
     let capitalChartInstance = null;
     let withdrawalChartInstance = null;
 
-    // Smart funktion för att förkorta stora tal på Y-axeln (t.ex. 5000000 -> 5 Mkr)
     function formatYAxis(value) {
         if (value >= 1000000) {
             return (value / 1000000).toLocaleString("sv-SE") + ' Mkr';
@@ -194,7 +193,10 @@
         document.getElementById('iskTaxDisplay').innerText = Math.round(firstYearIskTax).toLocaleString("sv-SE") + " kr/år";
 
         let currentCapital = initialCapital;
+        
+        // Arrayer för graferna
         let capitalHistory = [initialCapital];
+        let taxHistory = [firstYearIskTax]; // Ny array för skattelinjen
         let withdrawalHistory = [monthlySalary]; 
         let labels = ["År 0"];
 
@@ -211,18 +213,22 @@
 
             currentCapital = currentCapital + yearlyReturn + yearlySavings + extraInThisYear - extraOutThisYear - adjustedYearlyWithdrawal - yearlyIskTax;
             
-            if (currentCapital < 0) currentCapital = 0; 
+            if (currentCapital < 0) {
+                currentCapital = 0;
+                yearlyIskTax = 0; // Om pengarna är slut betalar vi ingen skatt nästa år
+            }
 
             capitalHistory.push(currentCapital);
+            taxHistory.push(yearlyIskTax); // Spara årets skatt
             withdrawalHistory.push(adjustedMonthlyWithdrawal); 
             labels.push("År " + i);
         }
 
-        updateCapitalChart(labels, capitalHistory);
+        updateCapitalChart(labels, capitalHistory, taxHistory);
         updateWithdrawalChart(labels, withdrawalHistory);
     }
 
-    function updateCapitalChart(labels, data) {
+    function updateCapitalChart(labels, capitalData, taxData) {
         const ctx = document.getElementById('capitalChart').getContext('2d');
         if (capitalChartInstance) capitalChartInstance.destroy();
 
@@ -230,34 +236,56 @@
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Sparkapital',
-                    data: data,
-                    borderColor: '#1abc9c',
-                    backgroundColor: 'rgba(26, 188, 156, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.1,
-                    pointRadius: 0 // Gömmer punkterna tills man hovrar för ett renare utseende på mobil
-                }]
+                datasets: [
+                    {
+                        label: 'Sparkapital (Vänster axel)',
+                        data: capitalData,
+                        borderColor: '#1abc9c',
+                        backgroundColor: 'rgba(26, 188, 156, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        yAxisID: 'y' // Kopplad till vänster axel
+                    },
+                    {
+                        label: 'Årlig ISK-skatt (Höger axel)',
+                        data: taxData,
+                        borderColor: '#e74c3c', // Röd färg
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5], // Gör linjen streckad
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        yAxisID: 'y1' // Kopplad till höger axel
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // NYTT: Tillåter grafen att fylla höjden på diven
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false // Gömmer legenden för att spara plats, titeln ovanför räcker
-                    }
+                    legend: { display: false } // Dold, vi löste det med text ovanför istället för att spara plats
                 },
                 scales: {
                     y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
                         beginAtZero: true,
-                        ticks: { callback: formatYAxis } // Använder vår nya "5 Mkr"-funktion
+                        ticks: { callback: formatYAxis }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right', // Lägger skalan på höger sida
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false }, // Förhindrar att linjerna krockar med vänstra axelns rutnät
+                        ticks: { callback: formatYAxis }
                     },
                     x: {
-                        ticks: {
-                            maxTicksLimit: 8 // Förhindrar att x-axeln blir grötig med för många år på liten skärm
-                        }
+                        ticks: { maxTicksLimit: 8 }
                     }
                 }
             }
@@ -285,7 +313,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // NYTT
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false }
                 },
