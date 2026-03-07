@@ -6,7 +6,6 @@
     <title>💰 Min FIRE Kalkylator</title>
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -52,47 +51,20 @@
             font-size: 1.1em;
             line-height: 1.6;
         }
-        .tax-warning {
-            color: #c0392b;
-            font-size: 0.9em;
-            margin-top: 5px;
-            font-weight: bold;
-        }
+        .tax-warning { color: #c0392b; font-size: 0.9em; margin-top: 5px; font-weight: bold; }
         
-        .chart-wrapper {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-        
-        .chart-container {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
+        .chart-wrapper { position: relative; height: 300px; width: 100%; }
+        .chart-container { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
         h3 { color: #2c3e50; margin-bottom: 10px; text-align: center; font-size: 1.1em; }
         .legend-info { text-align: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 10px; }
         
-        /* Design för exportknapparna */
         .export-section {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px dashed #ccc;
-            flex-wrap: wrap; /* Gör att knapparna hamnar under varandra på små skärmar */
+            display: flex; gap: 10px; justify-content: center; margin-top: 40px;
+            padding-top: 20px; border-top: 2px dashed #ccc; flex-wrap: wrap;
         }
         .btn {
-            background-color: #34495e;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: bold;
-            transition: 0.3s;
+            background-color: #34495e; color: white; border: none; padding: 12px 20px;
+            border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold; transition: 0.3s;
         }
         .btn:hover { background-color: #2c3e50; }
         .btn-excel { background-color: #27ae60; }
@@ -104,7 +76,7 @@
             .input-grid { grid-template-columns: 1fr; }
             .container { padding: 15px; }
             .chart-wrapper { height: 250px; }
-            .btn { width: 100%; } /* Bredare knappar på mobilen */
+            .btn { width: 100%; }
         }
     </style>
 </head>
@@ -141,6 +113,23 @@
         </div>
     </div>
 
+    <h2>🛡️ Guardrails & Stresstest</h2>
+    <div class="input-grid">
+        <div class="input-group">
+            <label for="guardrailRate">Guardrail: Sänk lönen om portföljen minskar (%):</label>
+            <input type="number" id="guardrailRate" value="10" step="1" oninput="calculateFIRE()">
+        </div>
+        <div></div>
+        <div class="input-group">
+            <label for="crashYear">Simulera en börskrasch år (1-30, 0 = av):</label>
+            <input type="number" id="crashYear" value="5" oninput="calculateFIRE()">
+        </div>
+        <div class="input-group">
+            <label for="crashDrop">Hur stor nedgång vid kraschen (%):</label>
+            <input type="number" id="crashDrop" value="30" step="1" oninput="calculateFIRE()">
+        </div>
+    </div>
+
     <h2>Sparande & Engångshändelser</h2>
     <div class="input-grid">
         <div class="input-group">
@@ -148,23 +137,21 @@
             <input type="number" id="monthlySavings" value="0" oninput="calculateFIRE()">
         </div>
         <div></div> 
-        
         <div class="input-group">
-            <label for="lumpSumIn">Engångsinsättning (t.ex. husförsäljning):</label>
-            <input type="number" id="lumpSumIn" value="0" placeholder="Belopp i kr" oninput="calculateFIRE()">
+            <label for="lumpSumIn">Engångsinsättning (t.ex. arv/hus):</label>
+            <input type="number" id="lumpSumIn" value="0" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumInYear">Vilket år sker insättningen? (1-30):</label>
-            <input type="number" id="lumpSumInYear" value="0" placeholder="År" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumInYear" value="0" oninput="calculateFIRE()">
         </div>
-
         <div class="input-group">
             <label for="lumpSumOut">Större engångsuttag (t.ex. båtköp):</label>
-            <input type="number" id="lumpSumOut" value="0" placeholder="Belopp i kr" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumOut" value="0" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumOutYear">Vilket år sker uttaget? (1-30):</label>
-            <input type="number" id="lumpSumOutYear" value="0" placeholder="År" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumOutYear" value="0" oninput="calculateFIRE()">
         </div>
     </div>
 
@@ -182,7 +169,8 @@
     </div>
 
     <div class="chart-container">
-        <h3>Löpande månadsuttag (justerat för inflation)</h3>
+        <h3>Uttag: Planerad lön vs. Faktiskt uttag (Månadssnitt)</h3>
+        <div class="legend-info">Orange Linje: Ursprunglig plan | Blå Stapel: Vad du faktiskt tar ut (inkl guardrails & engångsuttag)</div>
         <div class="chart-wrapper">
             <canvas id="withdrawalChart"></canvas>
         </div>
@@ -198,14 +186,11 @@
 <script>
     let capitalChartInstance = null;
     let withdrawalChartInstance = null;
-    let excelData = []; // Denna variabel sparar all data i bakgrunden för Excel-exporten
+    let excelData = [];
 
     function formatYAxis(value) {
-        if (value >= 1000000) {
-            return (value / 1000000).toLocaleString("sv-SE") + ' Mkr';
-        } else if (value >= 1000) {
-            return (value / 1000).toLocaleString("sv-SE") + ' tkr';
-        }
+        if (value >= 1000000) return (value / 1000000).toLocaleString("sv-SE") + ' Mkr';
+        if (value >= 1000) return (value / 1000).toLocaleString("sv-SE") + ' tkr';
         return value + ' kr';
     }
 
@@ -216,6 +201,10 @@
         const years = parseInt(document.getElementById('years').value) || 0;
         const inflationRate = parseFloat(document.getElementById('inflationRate').value) / 100 || 0;
         const iskRate = parseFloat(document.getElementById('iskRate').value) / 100 || 0;
+
+        const guardrailRate = parseFloat(document.getElementById('guardrailRate').value) / 100 || 0;
+        const crashYear = parseInt(document.getElementById('crashYear').value) || 0;
+        const crashDrop = parseFloat(document.getElementById('crashDrop').value) / 100 || 0;
 
         const monthlySavings = parseFloat(document.getElementById('monthlySavings').value) || 0;
         const lumpSumIn = parseFloat(document.getElementById('lumpSumIn').value) || 0;
@@ -233,45 +222,71 @@
         document.getElementById('iskTaxDisplay').innerText = Math.round(firstYearIskTax).toLocaleString("sv-SE") + " kr/år";
 
         let currentCapital = initialCapital;
+        let runningActualWithdrawal = initialYearlyWithdrawal; // Håller koll på den dynamiska lönen
         
         let capitalHistory = [initialCapital];
         let taxHistory = [firstYearIskTax]; 
-        let withdrawalHistory = [monthlySalary]; 
+        let baselineHistory = [monthlySalary]; // Ursprungsplanen
+        let actualWithdrawalHistory = [monthlySalary]; // Faktiskt uttag
         let labels = ["År 0"];
 
-        // Återställ Excel-datan och sätt rubrikerna
-        excelData = [["År", "Sparkapital (kr)", "Månadsuttag (kr)", "Årlig ISK-skatt (kr)"]];
-        excelData.push([0, Math.round(initialCapital), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
+        excelData = [["År", "Sparkapital (kr)", "Planerad lön/mån (kr)", "Faktiskt uttag/mån (kr)", "Årlig ISK-skatt (kr)"]];
+        excelData.push([0, Math.round(initialCapital), Math.round(monthlySalary), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
 
         for (let i = 1; i <= years; i++) {
-            let yearlyIskTax = currentCapital * iskRate;
-            let adjustedYearlyWithdrawal = initialYearlyWithdrawal * Math.pow((1 + inflationRate), i);
-            let adjustedMonthlyWithdrawal = adjustedYearlyWithdrawal / 12;
+            // 1. Vad är avkastningen i år? (Simulera krasch)
+            let currentReturnRate = returnRate;
+            if (i === crashYear) {
+                currentReturnRate = -Math.abs(crashDrop);
+            }
 
-            let yearlyReturn = currentCapital * returnRate;
+            // 2. Beräkna den teoretiska baslinjen (Planerad inflationsjusterad lön)
+            let baselineYearlyWithdrawal = initialYearlyWithdrawal * Math.pow((1 + inflationRate), i);
+            let baselineMonthly = baselineYearlyWithdrawal / 12;
+
+            // 3. Tillämpa Guardrails på det faktiska uttaget
+            if (i === 1) {
+                runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
+            } else {
+                // Om kapitalet minskade från förra året -> Sänk lönen!
+                if (currentCapital < capitalHistory[i - 2]) {
+                    runningActualWithdrawal = runningActualWithdrawal * (1 - guardrailRate);
+                } else {
+                    // Annars öka med inflation, men låt den inte överstiga ursprungsplanen
+                    runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
+                    if (runningActualWithdrawal > baselineYearlyWithdrawal) {
+                        runningActualWithdrawal = baselineYearlyWithdrawal;
+                    }
+                }
+            }
+
+            // 4. Räkna ut årets siffror
+            let yearlyIskTax = currentCapital * iskRate;
+            let yearlyReturn = currentCapital * currentReturnRate;
             let yearlySavings = monthlySavings * 12; 
             
             let extraInThisYear = (i === lumpSumInYear) ? lumpSumIn : 0;
             let extraOutThisYear = (i === lumpSumOutYear) ? lumpSumOut : 0;
 
-            currentCapital = currentCapital + yearlyReturn + yearlySavings + extraInThisYear - extraOutThisYear - adjustedYearlyWithdrawal - yearlyIskTax;
+            // Totalt uttag i år (Guardrail-lön + eventuella engångsuttag)
+            let totalActualOutThisYear = runningActualWithdrawal + extraOutThisYear;
+            let actualMonthlyAverageThisYear = totalActualOutThisYear / 12;
+
+            currentCapital = currentCapital + yearlyReturn + yearlySavings + extraInThisYear - totalActualOutThisYear - yearlyIskTax;
             
-            if (currentCapital < 0) {
-                currentCapital = 0;
-                yearlyIskTax = 0;
-            }
+            if (currentCapital < 0) { currentCapital = 0; yearlyIskTax = 0; }
 
             capitalHistory.push(currentCapital);
             taxHistory.push(yearlyIskTax); 
-            withdrawalHistory.push(adjustedMonthlyWithdrawal); 
+            baselineHistory.push(baselineMonthly);
+            actualWithdrawalHistory.push(actualMonthlyAverageThisYear);
             labels.push("År " + i);
 
-            // Spara data till Excel-arrayen
-            excelData.push([i, Math.round(currentCapital), Math.round(adjustedMonthlyWithdrawal), Math.round(yearlyIskTax)]);
+            excelData.push([i, Math.round(currentCapital), Math.round(baselineMonthly), Math.round(actualMonthlyAverageThisYear), Math.round(yearlyIskTax)]);
         }
 
         updateCapitalChart(labels, capitalHistory, taxHistory);
-        updateWithdrawalChart(labels, withdrawalHistory);
+        updateWithdrawalChart(labels, baselineHistory, actualWithdrawalHistory);
     }
 
     function updateCapitalChart(labels, capitalData, taxData) {
@@ -283,68 +298,52 @@
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: 'Sparkapital (Vänster axel)',
-                        data: capitalData,
-                        borderColor: '#1abc9c',
-                        backgroundColor: 'rgba(26, 188, 156, 0.2)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.1,
-                        pointRadius: 0,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Årlig ISK-skatt (Höger axel)',
-                        data: taxData,
-                        borderColor: '#e74c3c', 
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        borderDash: [5, 5], 
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 0,
-                        yAxisID: 'y1'
-                    }
+                    { label: 'Sparkapital (Vänster)', data: capitalData, borderColor: '#1abc9c', backgroundColor: 'rgba(26, 188, 156, 0.2)', borderWidth: 2, fill: true, tension: 0.1, pointRadius: 0, yAxisID: 'y' },
+                    { label: 'Årlig ISK-skatt (Höger)', data: taxData, borderColor: '#e74c3c', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], fill: false, tension: 0.1, pointRadius: 0, yAxisID: 'y1' }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        type: 'linear', display: true, position: 'left', beginAtZero: true,
-                        ticks: { callback: formatYAxis }
-                    },
-                    y1: {
-                        type: 'linear', display: true, position: 'right', beginAtZero: true,
-                        grid: { drawOnChartArea: false },
-                        ticks: { callback: formatYAxis }
-                    },
+                    y: { type: 'linear', display: true, position: 'left', beginAtZero: true, ticks: { callback: formatYAxis } },
+                    y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { callback: formatYAxis } },
                     x: { ticks: { maxTicksLimit: 8 } }
                 }
             }
         });
     }
 
-    function updateWithdrawalChart(labels, data) {
+    function updateWithdrawalChart(labels, baselineData, actualData) {
         const ctx = document.getElementById('withdrawalChart').getContext('2d');
         if (withdrawalChartInstance) withdrawalChartInstance.destroy();
 
         withdrawalChartInstance = new Chart(ctx, {
-            type: 'line',
+            type: 'bar', // Huvudtypen är nu bar (staplar) för kombinationsdiagrammet
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Månadsuttag', data: data,
-                    borderColor: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.2)',
-                    borderWidth: 2, fill: true, tension: 0.1, pointRadius: 0
-                }]
+                datasets: [
+                    {
+                        type: 'line', // Den teoretiska planen tvingas bli en linje
+                        label: 'Planerad månadslön (Baslinje)',
+                        data: baselineData,
+                        borderColor: '#e67e22',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        tension: 0.1,
+                        pointRadius: 0
+                    },
+                    {
+                        type: 'bar', // Det faktiska uttaget blir snygga staplar
+                        label: 'Faktiskt uttag (Månadssnitt)',
+                        data: actualData,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderRadius: 3
+                    }
+                ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { legend: { display: true, position: 'bottom' } },
                 scales: {
                     y: { beginAtZero: true, ticks: { callback: formatYAxis } },
                     x: { ticks: { maxTicksLimit: 8 } }
@@ -354,11 +353,8 @@
     }
 
     // --- EXPORT FUNKTIONER ---
-
-    // Exportera till Bild (PNG)
     function exportToImage() {
-        const element = document.getElementById('app-container');
-        html2canvas(element).then(canvas => {
+        html2canvas(document.getElementById('app-container')).then(canvas => {
             const link = document.createElement("a");
             link.download = "Min_FIRE_Kalkylator.png";
             link.href = canvas.toDataURL("image/png");
@@ -366,38 +362,24 @@
         });
     }
 
-    // Exportera till PDF
     function exportToPDF() {
         const { jsPDF } = window.jspdf;
-        const element = document.getElementById('app-container');
-        
-        // Ta en bild av appen och stoppa in i PDF-dokumentet
-        html2canvas(element, { scale: 2 }).then(canvas => {
+        html2canvas(document.getElementById('app-container'), { scale: 2 }).then(canvas => {
             const imgData = canvas.toDataURL("image/png");
-            const pdf = new jsPDF('p', 'mm', 'a4'); // Stående A4
-            
-            // Anpassa bildens storlek så den passar på A4-papperet
+            const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const imgProps = pdf.getImageProperties(imgData);
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
             pdf.save("Min_FIRE_Kalkylator.pdf");
         });
     }
 
-    // Exportera till Excel (som en CSV-fil)
     function exportToExcel() {
-        // \uFEFF hjälper Excel att förstå svenska tecken som Å, Ä, Ö (UTF-8)
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-        
-        // Loopa igenom datan och lägg till semikolon mellan kolumnerna
-        excelData.forEach(function(rowArray) {
-            let row = rowArray.join(";");
-            csvContent += row + "\r\n";
+        excelData.forEach(rowArray => {
+            csvContent += rowArray.join(";") + "\r\n";
         });
-
-        // Ladda ner filen
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
