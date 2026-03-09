@@ -10,47 +10,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #2c3e50; margin-bottom: 5px; }
-        h2 { color: #1abc9c; font-size: 1.2em; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 25px; }
+        h2 { color: #1abc9c; font-size: 1.2em; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 25px; display: flex; justify-content: space-between; align-items: center; }
         
-        .input-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
         .input-group { margin-bottom: 10px; }
         label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9em; }
-        input[type="number"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        .result-box {
-            background-color: #e8f8f5;
-            border-left: 5px solid #1abc9c;
-            padding: 15px;
-            margin: 20px 0;
-            font-size: 1.1em;
-            line-height: 1.6;
-        }
+        input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        
+        .result-box { background-color: #e8f8f5; border-left: 5px solid #1abc9c; padding: 15px; margin: 20px 0; font-size: 1.1em; line-height: 1.6; }
         .tax-warning { color: #c0392b; font-size: 0.9em; margin-top: 5px; font-weight: bold; }
         
         .chart-wrapper { position: relative; height: 300px; width: 100%; }
@@ -58,14 +28,11 @@
         h3 { color: #2c3e50; margin-bottom: 10px; text-align: center; font-size: 1.1em; }
         .legend-info { text-align: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 10px; }
         
-        .export-section {
-            display: flex; gap: 10px; justify-content: center; margin-top: 40px;
-            padding-top: 20px; border-top: 2px dashed #ccc; flex-wrap: wrap;
-        }
-        .btn {
-            background-color: #34495e; color: white; border: none; padding: 12px 20px;
-            border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold; transition: 0.3s;
-        }
+        .btn-simulate { background-color: #f39c12; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; font-weight: bold; transition: 0.3s; }
+        .btn-simulate:hover { background-color: #d68910; }
+
+        .export-section { display: flex; gap: 10px; justify-content: center; margin-top: 40px; padding-top: 20px; border-top: 2px dashed #ccc; flex-wrap: wrap; }
+        .btn { background-color: #34495e; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold; transition: 0.3s; }
         .btn:hover { background-color: #2c3e50; }
         .btn-excel { background-color: #27ae60; }
         .btn-excel:hover { background-color: #219a52; }
@@ -77,6 +44,7 @@
             .container { padding: 15px; }
             .chart-wrapper { height: 250px; }
             .btn { width: 100%; }
+            h2 { flex-direction: column; align-items: flex-start; gap: 10px; }
         }
     </style>
 </head>
@@ -85,31 +53,50 @@
 <div class="container" id="app-container">
     <h1>🔥💰 Min FIRE Kalkylator 💰🔥</h1>
 
-    <h2>Grunduppgifter</h2>
+    <h2>
+        Grunduppgifter 
+        <button class="btn-simulate" onclick="calculateFIRE(true)">🎲 Slå tärningen för ny börsutveckling</button>
+    </h2>
     <div class="input-grid">
         <div class="input-group">
             <label for="capital">Nuvarande sparkapital (kr):</label>
-            <input type="number" id="capital" value="5000000" oninput="calculateFIRE()">
+            <input type="number" id="capital" value="5000000" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
-            <label for="withdrawalRate">Uttagsnivå från start (%):</label>
-            <input type="number" id="withdrawalRate" value="4" step="0.1" oninput="calculateFIRE()">
+            <label for="withdrawalType">Typ av startuttag:</label>
+            <select id="withdrawalType" onchange="updateWithdrawalLabel(); calculateFIRE();">
+                <option value="percent">Procent av kapitalet (%)</option>
+                <option value="fixed">Fast summa per månad (kr)</option>
+            </select>
         </div>
         <div class="input-group">
-            <label for="returnRate">Förväntad årlig avkastning (%):</label>
-            <input type="number" id="returnRate" value="7" step="0.1" oninput="calculateFIRE()">
+            <label id="withdrawalLabel" for="withdrawalValue">Uttagsnivå från start (%):</label>
+            <input type="number" id="withdrawalValue" value="4" step="0.1" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="years">Tidshorisont (år):</label>
-            <input type="number" id="years" value="30" oninput="calculateFIRE()">
+            <input type="number" id="years" value="30" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="inflationRate">Årlig inflation (%):</label>
-            <input type="number" id="inflationRate" value="2" step="0.1" oninput="calculateFIRE()">
+            <input type="number" id="inflationRate" value="2" step="0.1" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="iskRate">Schablonskatt ISK (%):</label>
-            <input type="number" id="iskRate" value="1.08" step="0.01" oninput="calculateFIRE()">
+            <input type="number" id="iskRate" value="1.08" step="0.01" onchange="calculateFIRE()">
+        </div>
+    </div>
+
+    <h2>📈 Simulera Börsens Svängningar</h2>
+    <div class="input-grid">
+        <div class="input-group">
+            <label for="returnRate">Snittavkastning per år (%):</label>
+            <input type="number" id="returnRate" value="7" step="0.1" onchange="calculateFIRE()">
+        </div>
+        <div class="input-group">
+            <label for="volatility">Börsens svängighet / Volatilitet (%):</label>
+            <input type="number" id="volatility" value="15" step="1" onchange="calculateFIRE()">
+            <div style="font-size: 0.8em; color: #7f8c8d; margin-top: 2px;">(T.ex. 15% för aktiefonder, 5% för räntefonder)</div>
         </div>
     </div>
 
@@ -117,16 +104,16 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="guardrailRate">Guardrail: Sänk lönen om portföljen minskar (%):</label>
-            <input type="number" id="guardrailRate" value="10" step="1" oninput="calculateFIRE()">
+            <input type="number" id="guardrailRate" value="10" step="1" onchange="calculateFIRE()">
         </div>
         <div></div>
         <div class="input-group">
-            <label for="crashYear">Simulera en börskrasch år (1-30, 0 = av):</label>
-            <input type="number" id="crashYear" value="5" oninput="calculateFIRE()">
+            <label for="crashYear">Garanterad krasch år (1-30, 0 = av):</label>
+            <input type="number" id="crashYear" value="0" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
-            <label for="crashDrop">Hur stor nedgång vid kraschen (%):</label>
-            <input type="number" id="crashDrop" value="30" step="1" oninput="calculateFIRE()">
+            <label for="crashDrop">Nedgång vid kraschen (%):</label>
+            <input type="number" id="crashDrop" value="30" step="1" onchange="calculateFIRE()">
         </div>
     </div>
 
@@ -134,24 +121,24 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="monthlySavings">Månatligt nysparande (kr):</label>
-            <input type="number" id="monthlySavings" value="0" oninput="calculateFIRE()">
+            <input type="number" id="monthlySavings" value="0" onchange="calculateFIRE()">
         </div>
         <div></div> 
         <div class="input-group">
             <label for="lumpSumIn">Engångsinsättning (t.ex. arv/hus):</label>
-            <input type="number" id="lumpSumIn" value="0" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumIn" value="0" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumInYear">Vilket år sker insättningen? (1-30):</label>
-            <input type="number" id="lumpSumInYear" value="0" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumInYear" value="0" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumOut">Större engångsuttag (t.ex. båtköp):</label>
-            <input type="number" id="lumpSumOut" value="0" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumOut" value="0" onchange="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumOutYear">Vilket år sker uttaget? (1-30):</label>
-            <input type="number" id="lumpSumOutYear" value="0" oninput="calculateFIRE()">
+            <input type="number" id="lumpSumOutYear" value="0" onchange="calculateFIRE()">
         </div>
     </div>
 
@@ -161,7 +148,7 @@
     </div>
 
     <div class="chart-container">
-        <h3>Kapitalets utveckling & Årlig Skatt</h3>
+        <h3>Kapitalets utveckling (Med simulerade börssvängningar)</h3>
         <div class="legend-info">Vänster axel: Sparkapital (Grön) | Höger axel: Årlig ISK-skatt (Röd streckad)</div>
         <div class="chart-wrapper">
             <canvas id="capitalChart"></canvas>
@@ -170,7 +157,7 @@
 
     <div class="chart-container">
         <h3>Uttag: Planerad lön vs. Faktiskt uttag (Månadssnitt)</h3>
-        <div class="legend-info">Orange Linje: Ursprunglig plan | Blå Stapel: Vad du faktiskt tar ut (inkl guardrails & engångsuttag)</div>
+        <div class="legend-info">Orange Linje: Ursprunglig plan | Blå Stapel: Faktiskt uttag (påverkas av marknadens upp/nedgångar)</div>
         <div class="chart-wrapper">
             <canvas id="withdrawalChart"></canvas>
         </div>
@@ -188,16 +175,52 @@
     let withdrawalChartInstance = null;
     let excelData = [];
 
+    // Uppdaterar texten beroende på om man väljer % eller kronor
+    function updateWithdrawalLabel() {
+        const type = document.getElementById('withdrawalType').value;
+        const label = document.getElementById('withdrawalLabel');
+        const input = document.getElementById('withdrawalValue');
+        if (type === 'percent') {
+            label.innerText = "Uttagsnivå från start (%):";
+            if (input.value > 100) input.value = 4; // Återställ till rimligt värde om man byter tillbaka
+        } else {
+            label.innerText = "Fast summa per månad (kr):";
+            if (input.value <= 100) input.value = 30000; // Förslag på månadslön
+        }
+    }
+
+    // Formatering av Y-axeln
     function formatYAxis(value) {
         if (value >= 1000000) return (value / 1000000).toLocaleString("sv-SE") + ' Mkr';
         if (value >= 1000) return (value / 1000).toLocaleString("sv-SE") + ' tkr';
         return value + ' kr';
     }
 
-    function calculateFIRE() {
+    // En Box-Muller transformation för att skapa normalfördelade slumpmässiga siffror (börsens svängningar)
+    function randomNormal(mean, stdDev) {
+        if (stdDev === 0) return mean;
+        let u1 = Math.random();
+        let u2 = Math.random();
+        let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+        return z0 * stdDev + mean;
+    }
+
+    function calculateFIRE(forceNewSimulation = false) {
         const initialCapital = parseFloat(document.getElementById('capital').value) || 0;
-        const withdrawalRate = parseFloat(document.getElementById('withdrawalRate').value) / 100 || 0;
+        
+        // Hantera Typ av uttag (Procent vs Summa)
+        const withdrawalType = document.getElementById('withdrawalType').value;
+        const withdrawalValue = parseFloat(document.getElementById('withdrawalValue').value) || 0;
+        
+        let initialYearlyWithdrawal = 0;
+        if (withdrawalType === 'percent') {
+            initialYearlyWithdrawal = initialCapital * (withdrawalValue / 100);
+        } else {
+            initialYearlyWithdrawal = withdrawalValue * 12; // Fast summa i månaden x 12
+        }
+
         const returnRate = parseFloat(document.getElementById('returnRate').value) / 100 || 0;
+        const volatility = parseFloat(document.getElementById('volatility').value) / 100 || 0;
         const years = parseInt(document.getElementById('years').value) || 0;
         const inflationRate = parseFloat(document.getElementById('inflationRate').value) / 100 || 0;
         const iskRate = parseFloat(document.getElementById('iskRate').value) / 100 || 0;
@@ -214,7 +237,6 @@
 
         if (years <= 0) return;
 
-        const initialYearlyWithdrawal = initialCapital * withdrawalRate;
         const monthlySalary = initialYearlyWithdrawal / 12;
         const firstYearIskTax = initialCapital * iskRate;
         
@@ -222,37 +244,37 @@
         document.getElementById('iskTaxDisplay').innerText = Math.round(firstYearIskTax).toLocaleString("sv-SE") + " kr/år";
 
         let currentCapital = initialCapital;
-        let runningActualWithdrawal = initialYearlyWithdrawal; // Håller koll på den dynamiska lönen
+        let runningActualWithdrawal = initialYearlyWithdrawal; 
         
         let capitalHistory = [initialCapital];
         let taxHistory = [firstYearIskTax]; 
-        let baselineHistory = [monthlySalary]; // Ursprungsplanen
-        let actualWithdrawalHistory = [monthlySalary]; // Faktiskt uttag
+        let baselineHistory = [monthlySalary]; 
+        let actualWithdrawalHistory = [monthlySalary]; 
         let labels = ["År 0"];
 
-        excelData = [["År", "Sparkapital (kr)", "Planerad lön/mån (kr)", "Faktiskt uttag/mån (kr)", "Årlig ISK-skatt (kr)"]];
-        excelData.push([0, Math.round(initialCapital), Math.round(monthlySalary), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
+        excelData = [["År", "Marknadsutveckling (%)", "Sparkapital (kr)", "Planerad lön/mån (kr)", "Faktiskt uttag/mån (kr)", "Årlig ISK-skatt (kr)"]];
+        excelData.push([0, "Start", Math.round(initialCapital), Math.round(monthlySalary), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
 
         for (let i = 1; i <= years; i++) {
-            // 1. Vad är avkastningen i år? (Simulera krasch)
-            let currentReturnRate = returnRate;
+            // 1. Slumpa årets avkastning (normalfördelning baserat på volatilitet)
+            let currentReturnRate = randomNormal(returnRate, volatility);
+            
+            // Om användaren tvingar in en garanterad krasch detta år, åsidosätt slumpen
             if (i === crashYear) {
                 currentReturnRate = -Math.abs(crashDrop);
             }
 
-            // 2. Beräkna den teoretiska baslinjen (Planerad inflationsjusterad lön)
+            // 2. Teoretisk baslinje
             let baselineYearlyWithdrawal = initialYearlyWithdrawal * Math.pow((1 + inflationRate), i);
             let baselineMonthly = baselineYearlyWithdrawal / 12;
 
-            // 3. Tillämpa Guardrails på det faktiska uttaget
+            // 3. Tillämpa Guardrails
             if (i === 1) {
                 runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
             } else {
-                // Om kapitalet minskade från förra året -> Sänk lönen!
                 if (currentCapital < capitalHistory[i - 2]) {
                     runningActualWithdrawal = runningActualWithdrawal * (1 - guardrailRate);
                 } else {
-                    // Annars öka med inflation, men låt den inte överstiga ursprungsplanen
                     runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
                     if (runningActualWithdrawal > baselineYearlyWithdrawal) {
                         runningActualWithdrawal = baselineYearlyWithdrawal;
@@ -260,7 +282,7 @@
                 }
             }
 
-            // 4. Räkna ut årets siffror
+            // 4. Räkna ut summorna
             let yearlyIskTax = currentCapital * iskRate;
             let yearlyReturn = currentCapital * currentReturnRate;
             let yearlySavings = monthlySavings * 12; 
@@ -268,7 +290,6 @@
             let extraInThisYear = (i === lumpSumInYear) ? lumpSumIn : 0;
             let extraOutThisYear = (i === lumpSumOutYear) ? lumpSumOut : 0;
 
-            // Totalt uttag i år (Guardrail-lön + eventuella engångsuttag)
             let totalActualOutThisYear = runningActualWithdrawal + extraOutThisYear;
             let actualMonthlyAverageThisYear = totalActualOutThisYear / 12;
 
@@ -282,7 +303,9 @@
             actualWithdrawalHistory.push(actualMonthlyAverageThisYear);
             labels.push("År " + i);
 
-            excelData.push([i, Math.round(currentCapital), Math.round(baselineMonthly), Math.round(actualMonthlyAverageThisYear), Math.round(yearlyIskTax)]);
+            // Spara årets simulerade % i tabellen för Excel
+            let returnRatePercent = (currentReturnRate * 100).toFixed(1) + "%";
+            excelData.push([i, returnRatePercent, Math.round(currentCapital), Math.round(baselineMonthly), Math.round(actualMonthlyAverageThisYear), Math.round(yearlyIskTax)]);
         }
 
         updateCapitalChart(labels, capitalHistory, taxHistory);
@@ -295,13 +318,10 @@
 
         capitalChartInstance = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Sparkapital (Vänster)', data: capitalData, borderColor: '#1abc9c', backgroundColor: 'rgba(26, 188, 156, 0.2)', borderWidth: 2, fill: true, tension: 0.1, pointRadius: 0, yAxisID: 'y' },
-                    { label: 'Årlig ISK-skatt (Höger)', data: taxData, borderColor: '#e74c3c', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], fill: false, tension: 0.1, pointRadius: 0, yAxisID: 'y1' }
-                ]
-            },
+            data: { labels: labels, datasets: [
+                { label: 'Sparkapital (Vänster)', data: capitalData, borderColor: '#1abc9c', backgroundColor: 'rgba(26, 188, 156, 0.2)', borderWidth: 2, fill: true, tension: 0.2, pointRadius: 1, yAxisID: 'y' },
+                { label: 'Årlig ISK-skatt (Höger)', data: taxData, borderColor: '#e74c3c', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], fill: false, tension: 0.2, pointRadius: 0, yAxisID: 'y1' }
+            ]},
             options: {
                 responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                 scales: {
@@ -318,79 +338,10 @@
         if (withdrawalChartInstance) withdrawalChartInstance.destroy();
 
         withdrawalChartInstance = new Chart(ctx, {
-            type: 'bar', // Huvudtypen är nu bar (staplar) för kombinationsdiagrammet
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        type: 'line', // Den teoretiska planen tvingas bli en linje
-                        label: 'Planerad månadslön (Baslinje)',
-                        data: baselineData,
-                        borderColor: '#e67e22',
-                        backgroundColor: 'transparent',
-                        borderWidth: 3,
-                        tension: 0.1,
-                        pointRadius: 0
-                    },
-                    {
-                        type: 'bar', // Det faktiska uttaget blir snygga staplar
-                        label: 'Faktiskt uttag (Månadssnitt)',
-                        data: actualData,
-                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                        borderRadius: 3
-                    }
-                ]
-            },
+            type: 'bar', 
+            data: { labels: labels, datasets: [
+                { type: 'line', label: 'Planerad månadslön', data: baselineData, borderColor: '#e67e22', backgroundColor: 'transparent', borderWidth: 3, tension: 0.1, pointRadius: 0 },
+                { type: 'bar', label: 'Faktiskt uttag (Månadssnitt)', data: actualData, backgroundColor: 'rgba(52, 152, 219, 0.7)', borderRadius: 3 }
+            ]},
             options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: true, position: 'bottom' } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: formatYAxis } },
-                    x: { ticks: { maxTicksLimit: 8 } }
-                }
-            }
-        });
-    }
-
-    // --- EXPORT FUNKTIONER ---
-    function exportToImage() {
-        html2canvas(document.getElementById('app-container')).then(canvas => {
-            const link = document.createElement("a");
-            link.download = "Min_FIRE_Kalkylator.png";
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-        });
-    }
-
-    function exportToPDF() {
-        const { jsPDF } = window.jspdf;
-        html2canvas(document.getElementById('app-container'), { scale: 2 }).then(canvas => {
-            const imgData = canvas.toDataURL("image/png");
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const imgProps = pdf.getImageProperties(imgData);
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save("Min_FIRE_Kalkylator.pdf");
-        });
-    }
-
-    function exportToExcel() {
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-        excelData.forEach(rowArray => {
-            csvContent += rowArray.join(";") + "\r\n";
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "Min_FIRE_Kalkyl.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    window.onload = calculateFIRE;
-</script>
-
-</body>
-</html>
+                responsive: true, maintainAspectRatio: false, plugins:
