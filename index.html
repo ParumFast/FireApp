@@ -157,7 +157,7 @@
 
     <div class="chart-container">
         <h3>Uttag: Planerad lön vs. Faktiskt uttag (Månadssnitt)</h3>
-        <div class="legend-info">Orange Linje: Inflationsjusterad plan | Blå Stapel: Faktiskt uttag (påverkas av guardrails & engångsuttag)</div>
+        <div class="legend-info">Orange Linje: Inflationsjusterad plan | Blå Stapel: Faktiskt uttag (påverkas av kapitalbrist & guardrails)</div>
         <div class="chart-wrapper">
             <canvas id="withdrawalChart"></canvas>
         </div>
@@ -194,11 +194,8 @@
         return value + ' kr';
     }
 
-    // Skapar en array med slumpade siffror som EXAKT matchar snittet och volatiliteten
     function generateConstrainedReturns(years, targetMean, targetVolatility) {
-        if (targetVolatility === 0) {
-            return Array(years).fill(targetMean);
-        }
+        if (targetVolatility === 0) return Array(years).fill(targetMean);
 
         let rawReturns = [];
         for (let i = 0; i < years; i++) {
@@ -208,21 +205,12 @@
             rawReturns.push(z0);
         }
 
-        // Räkna ut vad rådatan fick för snitt och spridning
         let sum = rawReturns.reduce((a, b) => a + b, 0);
         let currentMean = sum / years;
         let variance = rawReturns.reduce((a, b) => a + Math.pow(b - currentMean, 2), 0) / years;
-        let currentStdDev = Math.sqrt(variance);
+        let currentStdDev = Math.sqrt(variance) || 1;
 
-        if (currentStdDev === 0) currentStdDev = 1;
-
-        // Tvinga datan att exakt matcha användarens inställningar
-        let finalReturns = rawReturns.map(r => {
-            let standardized = (r - currentMean) / currentStdDev; // Sätter snittet till 0 och stddev till 1
-            return (standardized * targetVolatility) + targetMean; // Skalar upp till rätt volatilitet och snitt
-        });
-
-        return finalReturns;
+        return rawReturns.map(r => (((r - currentMean) / currentStdDev) * targetVolatility) + targetMean);
     }
 
     function calculateFIRE() {
@@ -256,7 +244,6 @@
         document.getElementById('monthlySalary').innerText = Math.round(monthlySalary).toLocaleString("sv-SE") + " kr";
         document.getElementById('iskTaxDisplay').innerText = Math.round(firstYearIskTax).toLocaleString("sv-SE") + " kr/år";
 
-        // Generera den korrekta börshistoriken för hela perioden i förväg
         let marketReturns = generateConstrainedReturns(years, returnRate, volatility);
 
         let currentCapital = initialCapital;
@@ -272,27 +259,25 @@
         excelData.push([0, "Start", Math.round(initialCapital), Math.round(monthlySalary), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
 
         for (let i = 1; i <= years; i++) {
-            // Hämta årets avkastning från vår pre-genererade korrekta lista (index är i-1 eftersom arrayen börjar på 0)
             let currentReturnRate = marketReturns[i - 1];
-            
-            if (i === crashYear) {
-                currentReturnRate = -Math.abs(crashDrop);
-            }
+            if (i === crashYear) currentReturnRate = -Math.abs(crashDrop);
 
             // Teoretisk planerad lön (inflationsjusterad)
             let baselineYearlyWithdrawal = initialYearlyWithdrawal * Math.pow((1 + inflationRate), i);
             let baselineMonthly = baselineYearlyWithdrawal / 12;
 
-            // Tillämpa Guardrails
-            if (i === 1) {
-                runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
-            } else {
-                if (currentCapital < capitalHistory[i - 2]) { // Om portföljen minskade förra året
-                    runningActualWithdrawal = runningActualWithdrawal * (1 - guardrailRate);
-                } else { // Uppjustera med inflationen, max taket för planen
+            // Tillämpa Guardrails (men bara om vi inte redan har nollat lönen på grund av slut på pengar)
+            if (runningActualWithdrawal > 0) {
+                if (i === 1) {
                     runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
-                    if (runningActualWithdrawal > baselineYearlyWithdrawal) {
-                        runningActualWithdrawal = baselineYearlyWithdrawal;
+                } else {
+                    if (currentCapital < capitalHistory[i - 2]) {
+                        runningActualWithdrawal = runningActualWithdrawal * (1 - guardrailRate);
+                    } else {
+                        runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
+                        if (runningActualWithdrawal > baselineYearlyWithdrawal) {
+                            runningActualWithdrawal = baselineYearlyWithdrawal;
+                        }
                     }
                 }
             }
@@ -304,12 +289,34 @@
             let extraInThisYear = (i === lumpSumInYear) ? lumpSumIn : 0;
             let extraOutThisYear = (i === lumpSumOutYear) ? lumpSumOut : 0;
 
+            // Totalt kapital tillgängligt att röra sig med i år (innan uttag och skatt)
+            let availableFunds = currentCapital + yearlyReturn + yearlySavings + extraInThisYear;
+            
+            // Vad vi HELST vill ta ut
             let totalActualOutThisYear = runningActualWithdrawal + extraOutThisYear;
+
+            // NYTT: Verklighets-check! Finns det ens pengar till uttaget?
+            if (availableFunds < totalActualOutThisYear + yearlyIskTax) {
+                // Vi kan bara ta ut det som finns kvar efter skatt
+                totalActualOutThisYear = availableFunds - yearlyIskTax;
+                
+                // Om kapitalet inte ens täcker skatten...
+                if (totalActualOutThisYear <= 0) {
+                    yearlyIskTax = Math.max(0, availableFunds); // Skatten tar det lilla som finns
+                    totalActualOutThisYear = 0; // Du får 0 kr
+                }
+            }
+
             let actualMonthlyAverageThisYear = totalActualOutThisYear / 12;
 
-            currentCapital = currentCapital + yearlyReturn + yearlySavings + extraInThisYear - totalActualOutThisYear - yearlyIskTax;
+            // Uppdatera det slutgiltiga kapitalet efter årets händelser
+            currentCapital = availableFunds - totalActualOutThisYear - yearlyIskTax;
             
-            if (currentCapital < 0) { currentCapital = 0; yearlyIskTax = 0; }
+            // Säkerhetsnät: Blev vi helt panka? Då stänger vi kranen.
+            if (currentCapital <= 0) { 
+                currentCapital = 0; 
+                runningActualWithdrawal = 0; // Klipper lönen för framtiden
+            }
 
             capitalHistory.push(currentCapital);
             taxHistory.push(yearlyIskTax); 
