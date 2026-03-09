@@ -55,7 +55,7 @@
 
     <h2>
         Grunduppgifter 
-        <button class="btn-simulate" onclick="calculateFIRE(true)">🎲 Slå tärningen för ny börsutveckling</button>
+        <button class="btn-simulate" onclick="calculateFIRE()">🎲 Slå tärningen för ny börsutveckling</button>
     </h2>
     <div class="input-grid">
         <div class="input-group">
@@ -90,7 +90,7 @@
     <h2>📈 Simulera Börsens Svängningar</h2>
     <div class="input-grid">
         <div class="input-group">
-            <label for="returnRate">Snittavkastning per år (%):</label>
+            <label for="returnRate">Önskat snittavkastning per år (%):</label>
             <input type="number" id="returnRate" value="7" step="0.1" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
@@ -157,7 +157,7 @@
 
     <div class="chart-container">
         <h3>Uttag: Planerad lön vs. Faktiskt uttag (Månadssnitt)</h3>
-        <div class="legend-info">Orange Linje: Ursprunglig plan | Blå Stapel: Faktiskt uttag (påverkas av marknadens upp/nedgångar)</div>
+        <div class="legend-info">Orange Linje: Inflationsjusterad plan | Blå Stapel: Faktiskt uttag (påverkas av guardrails & engångsuttag)</div>
         <div class="chart-wrapper">
             <canvas id="withdrawalChart"></canvas>
         </div>
@@ -175,7 +175,6 @@
     let withdrawalChartInstance = null;
     let excelData = [];
 
-    // Uppdaterar etiketten och föreslår ett standardvärde beroende på vad man väljer
     function updateWithdrawalLabel() {
         const type = document.getElementById('withdrawalType').value;
         const label = document.getElementById('withdrawalLabel');
@@ -195,26 +194,43 @@
         return value + ' kr';
     }
 
-    // Säker slumpgenerator (förhindrar kraschar vid Math.random() = 0)
-    function randomNormal(mean, stdDev) {
-        if (stdDev === 0) return mean;
-        let u1 = Math.max(0.0001, Math.random()); // Ser till att vi aldrig drar 0
-        let u2 = Math.random();
-        let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-        return z0 * stdDev + mean;
+    // Skapar en array med slumpade siffror som EXAKT matchar snittet och volatiliteten
+    function generateConstrainedReturns(years, targetMean, targetVolatility) {
+        if (targetVolatility === 0) {
+            return Array(years).fill(targetMean);
+        }
+
+        let rawReturns = [];
+        for (let i = 0; i < years; i++) {
+            let u1 = Math.max(0.0001, Math.random());
+            let u2 = Math.random();
+            let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+            rawReturns.push(z0);
+        }
+
+        // Räkna ut vad rådatan fick för snitt och spridning
+        let sum = rawReturns.reduce((a, b) => a + b, 0);
+        let currentMean = sum / years;
+        let variance = rawReturns.reduce((a, b) => a + Math.pow(b - currentMean, 2), 0) / years;
+        let currentStdDev = Math.sqrt(variance);
+
+        if (currentStdDev === 0) currentStdDev = 1;
+
+        // Tvinga datan att exakt matcha användarens inställningar
+        let finalReturns = rawReturns.map(r => {
+            let standardized = (r - currentMean) / currentStdDev; // Sätter snittet till 0 och stddev till 1
+            return (standardized * targetVolatility) + targetMean; // Skalar upp till rätt volatilitet och snitt
+        });
+
+        return finalReturns;
     }
 
-    function calculateFIRE(forceNewSimulation = false) {
+    function calculateFIRE() {
         const initialCapital = parseFloat(document.getElementById('capital').value) || 0;
         const withdrawalType = document.getElementById('withdrawalType').value;
         const withdrawalValue = parseFloat(document.getElementById('withdrawalValue').value) || 0;
         
-        let initialYearlyWithdrawal = 0;
-        if (withdrawalType === 'percent') {
-            initialYearlyWithdrawal = initialCapital * (withdrawalValue / 100);
-        } else {
-            initialYearlyWithdrawal = withdrawalValue * 12; // Månadssumma blir årssumma
-        }
+        let initialYearlyWithdrawal = withdrawalType === 'percent' ? initialCapital * (withdrawalValue / 100) : withdrawalValue * 12;
 
         const returnRate = parseFloat(document.getElementById('returnRate').value) / 100 || 0;
         const volatility = parseFloat(document.getElementById('volatility').value) / 100 || 0;
@@ -240,6 +256,9 @@
         document.getElementById('monthlySalary').innerText = Math.round(monthlySalary).toLocaleString("sv-SE") + " kr";
         document.getElementById('iskTaxDisplay').innerText = Math.round(firstYearIskTax).toLocaleString("sv-SE") + " kr/år";
 
+        // Generera den korrekta börshistoriken för hela perioden i förväg
+        let marketReturns = generateConstrainedReturns(years, returnRate, volatility);
+
         let currentCapital = initialCapital;
         let runningActualWithdrawal = initialYearlyWithdrawal; 
         
@@ -253,8 +272,9 @@
         excelData.push([0, "Start", Math.round(initialCapital), Math.round(monthlySalary), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
 
         for (let i = 1; i <= years; i++) {
-            // Generera avkastning
-            let currentReturnRate = randomNormal(returnRate, volatility);
+            // Hämta årets avkastning från vår pre-genererade korrekta lista (index är i-1 eftersom arrayen börjar på 0)
+            let currentReturnRate = marketReturns[i - 1];
+            
             if (i === crashYear) {
                 currentReturnRate = -Math.abs(crashDrop);
             }
@@ -269,7 +289,7 @@
             } else {
                 if (currentCapital < capitalHistory[i - 2]) { // Om portföljen minskade förra året
                     runningActualWithdrawal = runningActualWithdrawal * (1 - guardrailRate);
-                } else { // Om den ökade, höj med inflation men överstig inte ursprungsplanen
+                } else { // Uppjustera med inflationen, max taket för planen
                     runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
                     if (runningActualWithdrawal > baselineYearlyWithdrawal) {
                         runningActualWithdrawal = baselineYearlyWithdrawal;
@@ -333,7 +353,7 @@
         withdrawalChartInstance = new Chart(ctx, {
             type: 'bar', 
             data: { labels: labels, datasets: [
-                { type: 'line', label: 'Planerad månadslön', data: baselineData, borderColor: '#e67e22', backgroundColor: 'transparent', borderWidth: 3, tension: 0.1, pointRadius: 0 },
+                { type: 'line', label: 'Planerad månadslön (inflationsjusterad)', data: baselineData, borderColor: '#e67e22', backgroundColor: 'transparent', borderWidth: 3, tension: 0.1, pointRadius: 0 },
                 { type: 'bar', label: 'Faktiskt uttag (Månadssnitt)', data: actualData, backgroundColor: 'rgba(52, 152, 219, 0.7)', borderRadius: 3 }
             ]},
             options: {
@@ -349,7 +369,7 @@
     function exportToExcel() { let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; excelData.forEach(rowArray => { csvContent += rowArray.join(";") + "\r\n"; }); const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", "Min_FIRE_Kalkyl.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
 
     // Starta uträkningen när sidan laddas
-    window.onload = function() { calculateFIRE(true); }
+    window.onload = function() { calculateFIRE(); }
 </script>
 
 </body>
