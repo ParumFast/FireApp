@@ -60,7 +60,7 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="capital">Nuvarande sparkapital (kr):</label>
-            <input type="number" id="capital" value="5000000" onchange="calculateFIRE()">
+            <input type="number" id="capital" value="5000000" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="withdrawalType">Typ av startuttag:</label>
@@ -71,19 +71,19 @@
         </div>
         <div class="input-group">
             <label id="withdrawalLabel" for="withdrawalValue">Uttagsnivå från start (%):</label>
-            <input type="number" id="withdrawalValue" value="4" step="0.1" onchange="calculateFIRE()">
+            <input type="number" id="withdrawalValue" value="4" step="0.1" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="years">Tidshorisont (år):</label>
-            <input type="number" id="years" value="30" onchange="calculateFIRE()">
+            <input type="number" id="years" value="30" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="inflationRate">Årlig inflation (%):</label>
-            <input type="number" id="inflationRate" value="2" step="0.1" onchange="calculateFIRE()">
+            <input type="number" id="inflationRate" value="2" step="0.1" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="iskRate">Schablonskatt ISK (%):</label>
-            <input type="number" id="iskRate" value="1.08" step="0.01" onchange="calculateFIRE()">
+            <input type="number" id="iskRate" value="1.08" step="0.01" oninput="calculateFIRE()">
         </div>
     </div>
 
@@ -91,12 +91,12 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="returnRate">Snittavkastning per år (%):</label>
-            <input type="number" id="returnRate" value="7" step="0.1" onchange="calculateFIRE()">
+            <input type="number" id="returnRate" value="7" step="0.1" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="volatility">Börsens svängighet / Volatilitet (%):</label>
-            <input type="number" id="volatility" value="15" step="1" onchange="calculateFIRE()">
-            <div style="font-size: 0.8em; color: #7f8c8d; margin-top: 2px;">(T.ex. 15% för aktiefonder, 5% för räntefonder)</div>
+            <input type="number" id="volatility" value="15" step="1" oninput="calculateFIRE()">
+            <div style="font-size: 0.8em; color: #7f8c8d; margin-top: 2px;">(T.ex. 15% för aktiefonder, 0% för en rak linje)</div>
         </div>
     </div>
 
@@ -104,16 +104,16 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="guardrailRate">Guardrail: Sänk lönen om portföljen minskar (%):</label>
-            <input type="number" id="guardrailRate" value="10" step="1" onchange="calculateFIRE()">
+            <input type="number" id="guardrailRate" value="10" step="1" oninput="calculateFIRE()">
         </div>
         <div></div>
         <div class="input-group">
             <label for="crashYear">Garanterad krasch år (1-30, 0 = av):</label>
-            <input type="number" id="crashYear" value="0" onchange="calculateFIRE()">
+            <input type="number" id="crashYear" value="0" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="crashDrop">Nedgång vid kraschen (%):</label>
-            <input type="number" id="crashDrop" value="30" step="1" onchange="calculateFIRE()">
+            <input type="number" id="crashDrop" value="30" step="1" oninput="calculateFIRE()">
         </div>
     </div>
 
@@ -121,24 +121,24 @@
     <div class="input-grid">
         <div class="input-group">
             <label for="monthlySavings">Månatligt nysparande (kr):</label>
-            <input type="number" id="monthlySavings" value="0" onchange="calculateFIRE()">
+            <input type="number" id="monthlySavings" value="0" oninput="calculateFIRE()">
         </div>
         <div></div> 
         <div class="input-group">
             <label for="lumpSumIn">Engångsinsättning (t.ex. arv/hus):</label>
-            <input type="number" id="lumpSumIn" value="0" onchange="calculateFIRE()">
+            <input type="number" id="lumpSumIn" value="0" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumInYear">Vilket år sker insättningen? (1-30):</label>
-            <input type="number" id="lumpSumInYear" value="0" onchange="calculateFIRE()">
+            <input type="number" id="lumpSumInYear" value="0" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumOut">Större engångsuttag (t.ex. båtköp):</label>
-            <input type="number" id="lumpSumOut" value="0" onchange="calculateFIRE()">
+            <input type="number" id="lumpSumOut" value="0" oninput="calculateFIRE()">
         </div>
         <div class="input-group">
             <label for="lumpSumOutYear">Vilket år sker uttaget? (1-30):</label>
-            <input type="number" id="lumpSumOutYear" value="0" onchange="calculateFIRE()">
+            <input type="number" id="lumpSumOutYear" value="0" oninput="calculateFIRE()">
         </div>
     </div>
 
@@ -175,31 +175,30 @@
     let withdrawalChartInstance = null;
     let excelData = [];
 
-    // Uppdaterar texten beroende på om man väljer % eller kronor
+    // Uppdaterar etiketten och föreslår ett standardvärde beroende på vad man väljer
     function updateWithdrawalLabel() {
         const type = document.getElementById('withdrawalType').value;
         const label = document.getElementById('withdrawalLabel');
         const input = document.getElementById('withdrawalValue');
         if (type === 'percent') {
             label.innerText = "Uttagsnivå från start (%):";
-            if (input.value > 100) input.value = 4; // Återställ till rimligt värde om man byter tillbaka
+            if (parseFloat(input.value) > 100) input.value = 4;
         } else {
             label.innerText = "Fast summa per månad (kr):";
-            if (input.value <= 100) input.value = 30000; // Förslag på månadslön
+            if (parseFloat(input.value) <= 100) input.value = 30000;
         }
     }
 
-    // Formatering av Y-axeln
     function formatYAxis(value) {
         if (value >= 1000000) return (value / 1000000).toLocaleString("sv-SE") + ' Mkr';
         if (value >= 1000) return (value / 1000).toLocaleString("sv-SE") + ' tkr';
         return value + ' kr';
     }
 
-    // En Box-Muller transformation för att skapa normalfördelade slumpmässiga siffror (börsens svängningar)
+    // Säker slumpgenerator (förhindrar kraschar vid Math.random() = 0)
     function randomNormal(mean, stdDev) {
         if (stdDev === 0) return mean;
-        let u1 = Math.random();
+        let u1 = Math.max(0.0001, Math.random()); // Ser till att vi aldrig drar 0
         let u2 = Math.random();
         let z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
         return z0 * stdDev + mean;
@@ -207,8 +206,6 @@
 
     function calculateFIRE(forceNewSimulation = false) {
         const initialCapital = parseFloat(document.getElementById('capital').value) || 0;
-        
-        // Hantera Typ av uttag (Procent vs Summa)
         const withdrawalType = document.getElementById('withdrawalType').value;
         const withdrawalValue = parseFloat(document.getElementById('withdrawalValue').value) || 0;
         
@@ -216,7 +213,7 @@
         if (withdrawalType === 'percent') {
             initialYearlyWithdrawal = initialCapital * (withdrawalValue / 100);
         } else {
-            initialYearlyWithdrawal = withdrawalValue * 12; // Fast summa i månaden x 12
+            initialYearlyWithdrawal = withdrawalValue * 12; // Månadssumma blir årssumma
         }
 
         const returnRate = parseFloat(document.getElementById('returnRate').value) / 100 || 0;
@@ -256,25 +253,23 @@
         excelData.push([0, "Start", Math.round(initialCapital), Math.round(monthlySalary), Math.round(monthlySalary), Math.round(firstYearIskTax)]);
 
         for (let i = 1; i <= years; i++) {
-            // 1. Slumpa årets avkastning (normalfördelning baserat på volatilitet)
+            // Generera avkastning
             let currentReturnRate = randomNormal(returnRate, volatility);
-            
-            // Om användaren tvingar in en garanterad krasch detta år, åsidosätt slumpen
             if (i === crashYear) {
                 currentReturnRate = -Math.abs(crashDrop);
             }
 
-            // 2. Teoretisk baslinje
+            // Teoretisk planerad lön (inflationsjusterad)
             let baselineYearlyWithdrawal = initialYearlyWithdrawal * Math.pow((1 + inflationRate), i);
             let baselineMonthly = baselineYearlyWithdrawal / 12;
 
-            // 3. Tillämpa Guardrails
+            // Tillämpa Guardrails
             if (i === 1) {
                 runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
             } else {
-                if (currentCapital < capitalHistory[i - 2]) {
+                if (currentCapital < capitalHistory[i - 2]) { // Om portföljen minskade förra året
                     runningActualWithdrawal = runningActualWithdrawal * (1 - guardrailRate);
-                } else {
+                } else { // Om den ökade, höj med inflation men överstig inte ursprungsplanen
                     runningActualWithdrawal = runningActualWithdrawal * (1 + inflationRate);
                     if (runningActualWithdrawal > baselineYearlyWithdrawal) {
                         runningActualWithdrawal = baselineYearlyWithdrawal;
@@ -282,7 +277,6 @@
                 }
             }
 
-            // 4. Räkna ut summorna
             let yearlyIskTax = currentCapital * iskRate;
             let yearlyReturn = currentCapital * currentReturnRate;
             let yearlySavings = monthlySavings * 12; 
@@ -303,7 +297,6 @@
             actualWithdrawalHistory.push(actualMonthlyAverageThisYear);
             labels.push("År " + i);
 
-            // Spara årets simulerade % i tabellen för Excel
             let returnRatePercent = (currentReturnRate * 100).toFixed(1) + "%";
             excelData.push([i, returnRatePercent, Math.round(currentCapital), Math.round(baselineMonthly), Math.round(actualMonthlyAverageThisYear), Math.round(yearlyIskTax)]);
         }
@@ -344,4 +337,20 @@
                 { type: 'bar', label: 'Faktiskt uttag (Månadssnitt)', data: actualData, backgroundColor: 'rgba(52, 152, 219, 0.7)', borderRadius: 3 }
             ]},
             options: {
-                responsive: true, maintainAspectRatio: false, plugins:
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } },
+                scales: { y: { beginAtZero: true, ticks: { callback: formatYAxis } }, x: { ticks: { maxTicksLimit: 8 } } }
+            }
+        });
+    }
+
+    // Export funktioner
+    function exportToImage() { html2canvas(document.getElementById('app-container')).then(canvas => { const link = document.createElement("a"); link.download = "Min_FIRE_Kalkylator.png"; link.href = canvas.toDataURL("image/png"); link.click(); }); }
+    function exportToPDF() { const { jsPDF } = window.jspdf; html2canvas(document.getElementById('app-container'), { scale: 2 }).then(canvas => { const imgData = canvas.toDataURL("image/png"); const pdf = new jsPDF('p', 'mm', 'a4'); const pdfWidth = pdf.internal.pageSize.getWidth(); const imgProps = pdf.getImageProperties(imgData); const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width; pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight); pdf.save("Min_FIRE_Kalkylator.pdf"); }); }
+    function exportToExcel() { let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; excelData.forEach(rowArray => { csvContent += rowArray.join(";") + "\r\n"; }); const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", "Min_FIRE_Kalkyl.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+
+    // Starta uträkningen när sidan laddas
+    window.onload = function() { calculateFIRE(true); }
+</script>
+
+</body>
+</html>
